@@ -1,0 +1,3 @@
+(executable
+  (name example1)
+  (libraries nanosvg tsdl))
