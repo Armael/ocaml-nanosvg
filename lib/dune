@@ -1,0 +1,8 @@
+(library
+  (name nanosvg)
+  (foreign_stubs
+   (language c)
+   (names nanosvg_stubs))
+)
+
+(copy_files ../vendor/*.h)
