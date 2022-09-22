@@ -2,13 +2,13 @@ module Image : sig
   type t
   val width : t -> float
   val height : t -> float
+  val delete : t -> unit
 end
 
 type units = Px | Pt | Pc | Mm | Cm | In
 
 val parse_from_file : ?units:units -> ?dpi:float -> string -> Image.t option
 val parse : ?units:units -> ?dpi:float -> string -> Image.t option
-val delete : Image.t -> unit
 
 module Rasterizer : sig
   type t

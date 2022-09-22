@@ -39,7 +39,7 @@ let main filename =
   Sdl.render_present renderer;
   Sdl.delay 3_000l;
   Sdl.destroy_window win;
-  Nanosvg.delete img;
+  Nanosvg.Image.delete img;
   Nanosvg.Rasterizer.delete rast;
   Sdl.quit ();
   exit 0
