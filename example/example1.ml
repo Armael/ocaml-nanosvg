@@ -7,8 +7,8 @@ let main filename =
     | None -> Sdl.log "Could not open or parse input file"; exit 1
   in
   let rast = Nanosvg.Rasterizer.create () in
-  let w = int_of_float (Nanosvg.Image.width img) in
-  let h = int_of_float (Nanosvg.Image.height img) in
+  let w = int_of_float (Nanosvg.Image_data.width img) in
+  let h = int_of_float (Nanosvg.Image_data.height img) in
   let dst = Bigarray.Array1.create Bigarray.Int8_unsigned Bigarray.C_layout (w * h * 4) in
   Nanosvg.rasterize rast img ~tx:0. ~ty:0. ~scale:1. ~dst ~w ~h ();
 
@@ -39,8 +39,6 @@ let main filename =
   Sdl.render_present renderer;
   Sdl.delay 3_000l;
   Sdl.destroy_window win;
-  Nanosvg.Image.delete img;
-  Nanosvg.Rasterizer.delete rast;
   Sdl.quit ();
   exit 0
 

@@ -1,102 +1,53 @@
-type image_raw
-type image = { mutable raw : image_raw option }
-let image_get img =
-  match img.raw with
-  | None -> raise (Invalid_argument "Nanosvg: image has been deleted")
-  | Some raw -> raw
-
-external image_delete_ : image_raw -> unit = "caml_nsvg_delete" [@@noalloc]
-let image_delete img =
-  let raw = image_get img in
-  img.raw <- None;
-  image_delete_ raw
-
-let mk_image raw =
-  let img = { raw = Some raw } in
-  Gc.finalise image_delete img; img
-
-type shape_raw
-type shape = { raw : shape_raw; owner : image }
-let shape_get s =
-  match s.owner.raw with
-  | None -> raise (Invalid_argument "Nanosvg: using a shape from a deleted image")
-  | Some _ -> s.raw
-
-module Image = struct
-  type t = image
-  let delete = image_delete
-
-  external width_ : image_raw -> float = "caml_nsvg_image_width"
-  external height_ : image_raw -> float = "caml_nsvg_image_height"
-  let width img = width_ (image_get img)
-  let height img = height_ (image_get img)
-
-  external shapes_ : image_raw -> shape_raw list = "caml_nsvg_image_shapes"
-  let shapes (img : image) : shape list =
-    List.map (fun raw -> { raw; owner = img }) (shapes_ (image_get img))
-end
-
+(* Values of these types are constructed from C. Constructors integer
+   representations MUST match the enum numbers from C *)
 type line_join = Join_miter | Join_round | Join_bevel
 type line_cap = Cap_butt | Cap_round | Cap_square
 type fill_rule = Fillrule_nonzero | Fillrule_evenodd
-(* Values of these types are constructed from C. Constructors integer
-   representations MUST match the enum numbers from C *)
 
-module Gradient = struct
-  type raw
-  type t = { raw : raw; owner : image }
-  let _get g =
-    match g.owner.raw with
-    | None -> raise (Invalid_argument "Nanosvg: using a gradient from a deleted image")
-    | Some _ -> g.raw
-  let mk img raw =
-    { raw; owner = img }
-end
-
-[@@@ocaml.warning "-37"]
-type paint_raw =
-  | Paint_none
-  | Paint_color of Int32.t
-  | Paint_linear_gradient of Gradient.raw
-  | Paint_radial_gradient of Gradient.raw
-(* values of this type are constructed from C *)
+type gradient = unit
 
 type paint =
   | Paint_none
   | Paint_color of Int32.t
-  | Paint_linear_gradient of Gradient.t
-  | Paint_radial_gradient of Gradient.t
+  | Paint_linear_gradient of gradient
+  | Paint_radial_gradient of gradient
 
-let mk_paint img (p : paint_raw) : paint =
-  match p with
-  | Paint_none -> Paint_none
-  | Paint_color i -> Paint_color i
-  | Paint_linear_gradient g -> Paint_linear_gradient (Gradient.mk img g)
-  | Paint_radial_gradient g -> Paint_radial_gradient (Gradient.mk img g)
+type shape = {
+  fill : paint;
+  stroke : paint;
+  opacity : float;
+  stroke_width : float;
+  stroke_dash_offset : float;
+  stroke_dash_count : int;
+  stroke_line_join : line_join;
+  stroke_line_cap : line_cap;
+  miter_limit : float;
+  fill_rule : fill_rule;
+}
 
-module Shape = struct
-  type t = shape
+type image = {
+  width : float;
+  height : float;
+  shapes : shape list;
+}
 
-  external fill_ : shape_raw -> paint_raw = "caml_nsvg_shape_fill"
-  let fill s = mk_paint s.owner (fill_ (shape_get s))
-  external stroke_ : shape_raw -> paint_raw = "caml_nsvg_shape_stroke"
-  let stroke s = mk_paint s.owner (stroke_ (shape_get s))
-  external opacity_ : shape_raw -> float = "caml_nsvg_shape_opacity"
-  let opacity s = opacity_ (shape_get s)
-  external stroke_width_ : shape_raw -> float = "caml_nsvg_shape_stroke_width"
-  let stroke_width s = stroke_width_ (shape_get s)
-  external stroke_dash_offset_ : shape_raw -> float = "caml_nsvg_shape_stroke_dash_offset"
-  let stroke_dash_offset s = stroke_dash_offset_ (shape_get s)
-  external stroke_dash_count_ : shape_raw -> int = "caml_nsvg_shape_stroke_dash_count" [@@noalloc]
-  let stroke_dash_count s = stroke_dash_count_ (shape_get s)
-  external stroke_line_join_ : shape_raw -> line_join = "caml_nsvg_shape_stroke_line_join" [@@noalloc]
-  let stroke_line_join s = stroke_line_join_ (shape_get s)
-  external stroke_line_cap_ : shape_raw -> line_cap = "caml_nsvg_shape_stroke_line_cap" [@@noalloc]
-  let stroke_line_cap s = stroke_line_cap_ (shape_get s)
-  external miter_limit_ : shape_raw -> float = "caml_nsvg_shape_miter_limit"
-  let miter_limit s = miter_limit_ (shape_get s)
-  external fill_rule_ : shape_raw -> fill_rule = "caml_nsvg_shape_fill_rule" [@@noalloc]
-  let fill_rule s = fill_rule_ (shape_get s)
+module Image_data = struct
+  type c_data
+  external delete_image_c_data : c_data -> unit = "caml_nsvg_delete_image_c_data"
+
+  (* block to allow attaching a finalizer *)
+  type t = { dat : c_data }
+
+  let mk dat =
+    let img = { dat } in
+    Gc.finalise (fun img -> delete_image_c_data img.dat) img;
+    img
+
+  external width_ : c_data -> float = "caml_nsvg_image_width"
+  let width { dat } = width_ dat
+
+  external height_ : c_data -> float = "caml_nsvg_image_height"
+  let height { dat } = height_ dat
 end
 
 type units = Px | Pt | Pc | Mm | Cm | In
@@ -109,52 +60,47 @@ let string_of_units = function
   | Cm -> "cm"
   | In -> "in"
 
-external parse_from_file_ : string -> string -> float -> image_raw option =
+external parse_from_file_ : string -> string -> float -> Image_data.c_data option =
   "caml_nsvg_parse_from_file"
 
 let parse_from_file ?(units = Px) ?(dpi = 96.) filename =
-  Option.map mk_image @@ parse_from_file_ filename (string_of_units units) dpi
+  Option.map Image_data.mk @@
+  parse_from_file_ filename (string_of_units units) dpi
 
-external parse_ : string -> string -> float -> image_raw option =
+external parse_ : string -> string -> float -> Image_data.c_data option =
   "caml_nsvg_parse"
 
 let parse ?(units = Px) ?(dpi = 96.) data =
-  Option.map mk_image @@ parse_ data (string_of_units units) dpi
+  Option.map Image_data.mk @@
+  parse_ data (string_of_units units) dpi
+
+external lift_ : Image_data.c_data -> image = "caml_nsvg_lift"
+let lift { Image_data.dat } = lift_ dat
 
 module Rasterizer = struct
   type raw
-  type t = { mutable raw : raw option }
-  let get rast =
-    match rast.raw with
-    | None -> raise (Invalid_argument "Nanosvg: rasterizer has been deleted")
-    | Some raw -> raw
+  type t = { raw : raw }
+  external delete : raw -> unit = "caml_nsvg_delete_rasterizer" [@@noalloc]
 
-  external delete_ : raw -> unit = "caml_nsvg_delete_rasterizer" [@@noalloc]
-  let delete rast =
-    let raw = get rast in
-    rast.raw <- None;
-    delete_ raw
-
-  let mk raw =
-    let rast = { raw = Some raw } in
-    Gc.finalise delete rast; rast
-
-  external create_ : unit -> raw = "caml_nsvg_create_rasterizer" [@@noalloc]
-  let create () = mk @@ create_ ()
+  external create : unit -> raw = "caml_nsvg_create_rasterizer" [@@noalloc]
+  let create () =
+    let rast = { raw = create () } in
+    Gc.finalise (fun r -> delete r.raw) rast;
+    rast
 end
 
 type data8 = (int, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array1.t
 
 external rasterize_ :
-  Rasterizer.raw -> image_raw ->
+  Rasterizer.raw -> Image_data.c_data ->
   float -> float -> float ->
   data8 -> int -> int -> int ->
   unit
   = "caml_nsvg_rasterize_bytecode" "caml_nsvg_rasterize_native" [@@noalloc]
 
-let rasterize t img ~tx ~ty ~scale ~dst ~w ~h ?(stride = w * 4) () =
+let rasterize (t: Rasterizer.t) { Image_data.dat } ~tx ~ty ~scale ~dst ~w ~h ?(stride = w * 4) () =
   if stride < w * 4 then
     raise (Invalid_argument "Nanosvg.Rasterizer.rasterize: invalid stride (too small)");
   if Bigarray.Array1.size_in_bytes dst < h * stride then
     raise (Invalid_argument "Nanosvg.Rasterizer.rasterize: destination buffer too small");
-  rasterize_ (Rasterizer.get t) (image_get img) tx ty scale dst w h stride
+  rasterize_ t.raw dat tx ty scale dst w h stride

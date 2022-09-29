@@ -2,53 +2,54 @@ type line_join = Join_miter | Join_round | Join_bevel
 type line_cap = Cap_butt | Cap_round | Cap_square
 type fill_rule = Fillrule_nonzero | Fillrule_evenodd
 
-module Gradient : sig
-  type t
-end
+type gradient
 
 type paint =
   | Paint_none
   | Paint_color of Int32.t
-  | Paint_linear_gradient of Gradient.t
-  | Paint_radial_gradient of Gradient.t
+  | Paint_linear_gradient of gradient
+  | Paint_radial_gradient of gradient
 
-module Shape : sig
-  type t
-  val fill : t -> paint
-  val stroke : t -> paint
-  val opacity : t -> float
-  val stroke_width : t -> float
-  val stroke_dash_offset : t -> float
-  val stroke_dash_count : t -> int
-  val stroke_line_join : t -> line_join
-  val stroke_line_cap : t -> line_cap
-  val miter_limit : t -> float
-  val fill_rule : t -> fill_rule
-end
+type shape = {
+  fill : paint;
+  stroke : paint;
+  opacity : float;
+  stroke_width : float;
+  stroke_dash_offset : float;
+  stroke_dash_count : int;
+  stroke_line_join : line_join;
+  stroke_line_cap : line_cap;
+  miter_limit : float;
+  fill_rule : fill_rule;
+}
 
-module Image : sig
+type image = {
+  width : float;
+  height : float;
+  shapes : shape list;
+}
+
+module Image_data : sig
   type t
   val width : t -> float
   val height : t -> float
-  val delete : t -> unit
-  val shapes : t -> Shape.t list
 end
 
 type units = Px | Pt | Pc | Mm | Cm | In
 
-val parse_from_file : ?units:units -> ?dpi:float -> string -> Image.t option
-val parse : ?units:units -> ?dpi:float -> string -> Image.t option
+val parse_from_file : ?units:units -> ?dpi:float -> string -> Image_data.t option
+val parse : ?units:units -> ?dpi:float -> string -> Image_data.t option
+val lift : Image_data.t -> image
 
 module Rasterizer : sig
   type t
   val create : unit -> t
-  val delete : t -> unit
 end
 
 type data8 = (int, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array1.t
 
 val rasterize :
-  Rasterizer.t -> Image.t ->
+  Rasterizer.t -> Image_data.t ->
   tx:float -> ty:float -> scale:float ->
   dst:data8 -> w:int -> h:int -> ?stride:int ->
   unit ->
