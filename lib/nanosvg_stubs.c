@@ -12,12 +12,48 @@
 #include "nanosvg.h"
 #include "nanosvgrast.h"
 
+// NSVGgradientStop
+
+value caml_nsvg_alloc_gradient_stop(NSVGgradientStop* gs) {
+  CAMLparam0();
+  CAMLlocal2(ret, tmp);
+  ret = caml_alloc(2, 0);
+  // color
+  tmp = caml_copy_int32(gs->color);
+  Store_field(ret, 0, tmp);
+  // offset
+  tmp = caml_copy_double(gs->offset);
+  Store_field(ret, 1, tmp);
+  CAMLreturn(ret);
+}
+
 // NSVGgradient
 
 value caml_nsvg_alloc_gradient(NSVGgradient* g) {
   CAMLparam0();
-  CAMLlocal1(ret);
-  ret = Val_int(0); // TODO
+  CAMLlocal2(ret, tmp);
+  ret = caml_alloc(5, 0);
+  int field = 0;
+  // xform
+  tmp = caml_alloc_float_array(6);
+  for (int i = 0; i < 6; i++) {
+    Store_double_array_field(tmp, i, g->xform[i]);
+  }
+  Store_field(ret, field++, tmp);
+  // spread
+  Store_field(ret, field++, Val_int(g->spread));
+  // fx
+  tmp = caml_copy_double(g->fx);
+  Store_field(ret, field++, tmp);
+  // fy
+  tmp = caml_copy_double(g->fy);
+  Store_field(ret, field++, tmp);
+  // stops
+  tmp = caml_alloc(g->nstops, 0);
+  for (int i = 0; i < g->nstops; i++) {
+    Store_field(tmp, i, caml_nsvg_alloc_gradient_stop(&g->stops[i]));
+  }
+  Store_field(ret, field++, tmp);
   CAMLreturn(ret);
 }
 
@@ -33,17 +69,17 @@ value caml_nsvg_alloc_paint(NSVGpaint* paint) {
     case NSVG_PAINT_COLOR:
       ret = caml_alloc(1, 1);
       tmp = caml_copy_int32(paint->color);
-      Field(ret, 0) = tmp;
+      Store_field(ret, 0, tmp);
       break;
     case NSVG_PAINT_LINEAR_GRADIENT:
       ret = caml_alloc(1, 2);
       tmp = caml_nsvg_alloc_gradient(paint->gradient);
-      Field(ret, 0) = tmp;
+      Store_field(ret, 0, tmp);
       break;
     case NSVG_PAINT_RADIAL_GRADIENT:
       ret = caml_alloc(1, 3);
       tmp = caml_nsvg_alloc_gradient(paint->gradient);
-      Field(ret, 0) = tmp;
+      Store_field(ret, 0, tmp);
       break;
     default: // impossible
       ret = Val_int(0);
@@ -52,46 +88,117 @@ value caml_nsvg_alloc_paint(NSVGpaint* paint) {
   CAMLreturn(ret);
 }
 
+// bounding box
+
+value caml_nsvg_alloc_bounds(float* bounds) {
+  CAMLparam0();
+  CAMLlocal1(ret);
+  ret = caml_alloc_float_array(4); // box
+  for (int i = 0; i < 4; i++) {
+    Store_double_array_field(ret, i, bounds[i]);
+  }
+  CAMLreturn(ret);
+}
+
+// cubic bezier point
+
+value caml_nsvg_alloc_bezier_point(float* pt) {
+  CAMLparam0();
+  CAMLlocal1(ret);
+  ret = caml_alloc_float_array(8); // bezier_point
+  for (int i = 0; i < 8; i++) {
+    Store_double_array_field(ret, i, pt[i]);
+  }
+  CAMLreturn(ret);
+}
+
+// NSVGpath
+
+value caml_nsvg_alloc_path(NSVGpath* path) {
+  CAMLparam0();
+  CAMLlocal2(ret, tmp);
+  ret = caml_alloc(3, 0); // nb of record fields
+  int field = 0;
+  // points
+  tmp = caml_alloc(path->npts, 0);
+  for (int i = 0; i < path->npts; i++) {
+    Store_field(tmp, i, caml_nsvg_alloc_bezier_point(&path->pts[i*8]));
+  }
+  Store_field(ret, field++, tmp);
+  // closed
+  tmp = Val_int(path->closed ? 1 : 0);
+  Store_field(ret, field++, tmp);
+  // bounds
+  tmp = caml_nsvg_alloc_bounds(path->bounds);
+  Store_field(ret, field++, tmp);
+  CAMLreturn(ret);
+}
+
 // NSVGshape
 
 value caml_nsvg_alloc_shape(NSVGshape* shape) {
   CAMLparam0();
   CAMLlocal2(ret, tmp);
-  ret = caml_alloc(10, 0);
+  ret = caml_alloc(13, 0); // nb of record fields
   int field = 0;
-  // TODO: id
+  // id
+  char* id_tmp = calloc(65, sizeof(char));
+  strncpy(id_tmp, shape->id, 64);
+  tmp = caml_copy_string(id_tmp);
+  free(id_tmp);
+  Store_field(ret, field++, tmp);
   // fill
   tmp = caml_nsvg_alloc_paint(&shape->fill);
-  Field(ret, field++) = tmp;
+  Store_field(ret, field++, tmp);
   // stroke
   tmp = caml_nsvg_alloc_paint(&shape->stroke);
-  Field(ret, field++) = tmp;
+  Store_field(ret, field++, tmp);
   // opacity
   tmp = caml_copy_double(shape->opacity);
-  Field(ret, field++) = tmp;
+  Store_field(ret, field++, tmp);
   // stroke_width
   tmp = caml_copy_double(shape->strokeWidth);
-  Field(ret, field++) = tmp;
+  Store_field(ret, field++, tmp);
   // stroke_dash_offset
   tmp = caml_copy_double(shape->strokeDashOffset);
-  Field(ret, field++) = tmp;
-  // TODO: strokeDashArray
-  // stroke_dash_count
-  tmp = Val_int(shape->strokeDashCount);
-  Field(ret, field++) = tmp;
+  Store_field(ret, field++, tmp);
+  // stroke_dash_array
+  tmp = caml_alloc_float_array(shape->strokeDashCount);
+  for (int i = 0; i < shape->strokeDashCount; i++) {
+    Store_double_array_field(tmp, i, shape->strokeDashArray[i]);
+  }
+  Store_field(ret, field++, tmp);
   // stroke_line_join
   tmp = Val_int(shape->strokeLineJoin);
-  Field(ret, field++) = tmp;
+  Store_field(ret, field++, tmp);
   // stroke_line_cap
   tmp = Val_int(shape->strokeLineCap);
-  Field(ret, field++) = tmp;
+  Store_field(ret, field++, tmp);
   // miter_limit
   tmp = caml_copy_double(shape->miterLimit);
-  Field(ret, field++) = tmp;
+  Store_field(ret, field++, tmp);
   // fill_rule
   tmp = Val_int(shape->fillRule);
-  Field(ret, field++) = tmp;
-  // TODO: flags, bounds, paths
+  Store_field(ret, field++, tmp);
+  // flags (only one: NSVG_FLAGS_VISIBLE)
+  tmp = Val_int(shape->flags ? 1 : 0); // visible?
+  Store_field(ret, field++, tmp);
+  // bounds
+  tmp = caml_nsvg_alloc_bounds(shape->bounds);
+  Store_field(ret, field++, tmp);
+  // paths
+  tmp = Val_int(0);
+  value* cur = &tmp;
+  NSVGpath* path = shape->paths;
+  while (path) {
+    *cur = caml_alloc_tuple(2);
+    tmp = caml_nsvg_alloc_path(path);
+    Store_field(*cur, 0, tmp);
+    Store_field(*cur, 1, Val_int(0));
+    cur = &Field(*cur, 1);
+    path = path->next;
+  }
+  Store_field(ret, field++, tmp);
   CAMLreturn(ret);
 }
 
@@ -103,10 +210,10 @@ value caml_nsvg_alloc_image(NSVGimage* image) {
   ret = caml_alloc(3, 0);
   // width
   tmp = caml_copy_double(image->width);
-  Field(ret, 0) = tmp;
+  Store_field(ret, 0, tmp);
   // height
   tmp = caml_copy_double(image->height);
-  Field(ret, 1) = tmp;
+  Store_field(ret, 1, tmp);
   // shapes
   list = Val_int(0);
   value* cur = &list;
@@ -114,12 +221,12 @@ value caml_nsvg_alloc_image(NSVGimage* image) {
   while (shape) {
     *cur = caml_alloc_tuple(2);
     tmp = caml_nsvg_alloc_shape(shape);
-    Field(*cur, 0) = tmp;
-    Field(*cur, 1) = Val_int(0);
+    Store_field(*cur, 0, tmp);
+    Store_field(*cur, 1, Val_int(0));
     cur = &Field(*cur, 1);
     shape = shape->next;
   }
-  Field(ret, 2) = list;
+  Store_field(ret, 2, list);
   CAMLreturn(ret);
 }
 
