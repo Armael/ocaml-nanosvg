@@ -22,7 +22,7 @@ let use_svg (img: Nanosvg.image) =
     List.iter (fun p ->
       use p.closed;
       use_box p.bounds;
-      Array.iter use p.points
+      Array.iter use_bezier_point p.points
     ) s.paths;
   ) img.shapes
 
