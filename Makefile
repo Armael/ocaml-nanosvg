@@ -7,4 +7,7 @@ example:
 clean:
 	dune clean
 
-.PHONY: all example clean
+test:
+	dune runtest
+
+.PHONY: all example clean test
