@@ -100,15 +100,14 @@ value caml_nsvg_alloc_bounds(float* bounds) {
   CAMLreturn(ret);
 }
 
-// cubic bezier point
+// point
 
-value caml_nsvg_alloc_bezier_point(float* pt) {
+value caml_nsvg_alloc_point(float* pt) {
   CAMLparam0();
   CAMLlocal1(ret);
-  ret = caml_alloc_float_array(8); // bezier_point
-  for (int i = 0; i < 8; i++) {
-    Store_double_array_field(ret, i, pt[i]);
-  }
+  ret = caml_alloc_float_array(2);
+  Store_double_array_field(ret, 0, pt[0]);
+  Store_double_array_field(ret, 1, pt[1]);
   CAMLreturn(ret);
 }
 
@@ -116,13 +115,14 @@ value caml_nsvg_alloc_bezier_point(float* pt) {
 
 value caml_nsvg_alloc_path(NSVGpath* path) {
   CAMLparam0();
-  CAMLlocal2(ret, tmp);
+  CAMLlocal3(ret, tmp, tmp2);
   ret = caml_alloc(3, 0); // nb of record fields
   int field = 0;
   // points
   tmp = caml_alloc(path->npts, 0);
   for (int i = 0; i < path->npts; i++) {
-    Store_field(tmp, i, caml_nsvg_alloc_bezier_point(&path->pts[i*8]));
+    tmp2 = caml_nsvg_alloc_point(&path->pts[i*2]);
+    Store_field(tmp, i, tmp2);
   }
   Store_field(ret, field++, tmp);
   // closed
@@ -131,6 +131,7 @@ value caml_nsvg_alloc_path(NSVGpath* path) {
   // bounds
   tmp = caml_nsvg_alloc_bounds(path->bounds);
   Store_field(ret, field++, tmp);
+  assert (Field(ret, 0) != ret);
   CAMLreturn(ret);
 }
 
@@ -138,7 +139,7 @@ value caml_nsvg_alloc_path(NSVGpath* path) {
 
 value caml_nsvg_alloc_shape(NSVGshape* shape) {
   CAMLparam0();
-  CAMLlocal2(ret, tmp);
+  CAMLlocal3(ret, tmp, list);
   ret = caml_alloc(13, 0); // nb of record fields
   int field = 0;
   // id
@@ -187,8 +188,8 @@ value caml_nsvg_alloc_shape(NSVGshape* shape) {
   tmp = caml_nsvg_alloc_bounds(shape->bounds);
   Store_field(ret, field++, tmp);
   // paths
-  tmp = Val_int(0);
-  value* cur = &tmp;
+  list = Val_int(0);
+  value* cur = &list;
   NSVGpath* path = shape->paths;
   while (path) {
     *cur = caml_alloc_tuple(2);
@@ -198,7 +199,7 @@ value caml_nsvg_alloc_shape(NSVGshape* shape) {
     cur = &Field(*cur, 1);
     path = path->next;
   }
-  Store_field(ret, field++, tmp);
+  Store_field(ret, field++, list);
   CAMLreturn(ret);
 }
 

@@ -22,15 +22,10 @@ type box = {
   maxx : float; maxy : float;
 }
 
-type bezier_point = {
-  x0 : float; y0 : float;
-  cpx1 : float; cpy1 : float;
-  cpx2 : float; cpy2 : float;
-  x1 : float; y1 : float;
-}
+type point = { x : float; y : float }
 
 type path = {
-  points : bezier_point array;
+  points : point array;
   closed : bool;
   bounds : box;
 }

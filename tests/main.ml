@@ -2,14 +2,11 @@ let use (x: 'a) =
   Sys.opaque_identity ignore x
 
 let use_box (b: Nanosvg.box) =
-  use (int_of_float b.minx, int_of_float b.miny,
-       int_of_float b.maxx, int_of_float b.maxy)
+  use (b.minx +. 1., b.miny +. 1.,
+       b.maxx +. 1., b.maxy +. 1.)
 
-let use_bezier_point (p: Nanosvg.bezier_point) =
-  use (int_of_float p.x0, int_of_float p.y0,
-       int_of_float p.cpx1, int_of_float p.cpy1,
-       int_of_float p.cpx2, int_of_float p.cpy2,
-       int_of_float p.x1, int_of_float p.y1)
+let use_point (p: Nanosvg.point) =
+  use (p.x +. 1., p.y +. 1.)
 
 let use_svg (img: Nanosvg.image) =
   let open Nanosvg in
@@ -22,7 +19,7 @@ let use_svg (img: Nanosvg.image) =
     List.iter (fun p ->
       use p.closed;
       use_box p.bounds;
-      Array.iter use_bezier_point p.points
+      Array.iter use_point p.points
     ) s.paths;
   ) img.shapes
 
