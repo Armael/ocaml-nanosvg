@@ -12,6 +12,32 @@
 #include "nanosvg.h"
 #include "nanosvgrast.h"
 
+// NSVGtextAnchor
+
+value caml_nsvg_text_anchor(enum NSVGtextAnchor anchor) {
+  // NSVGtextAnchor seems to be a bitfield, but I'm not sure it makes sense to
+  // have several anchors at the same time?
+  // Let's ignore the bitfield aspect and handle only one for now.
+  value text_anchor = Val_int(0); // Anchor_left is the default
+  if (anchor & NSVG_ANCHOR_CENTER)
+    text_anchor = Val_int(1);
+  if (anchor & NSVG_ANCHOR_RIGHT)
+    text_anchor = Val_int(2);
+  return text_anchor;
+}
+
+// NSVGtextStyle
+
+value caml_nsvg_text_style(enum NSVGtextStyle style) {
+  // same considerations than for NSVGtextAnchor
+  value text_style = Val_int(0); // Text_normal is the default
+  if (style & NSVG_TEXT_ITALIC)
+    text_style = Val_int(1);
+  if (style & NSVG_TEXT_OBLIQUE)
+    text_style = Val_int(2);
+  return text_style;
+}
+
 // NSVGgradientStop
 
 value caml_nsvg_alloc_gradient_stop(NSVGgradientStop* gs) {
@@ -37,7 +63,7 @@ value caml_nsvg_alloc_gradient(NSVGgradient* g) {
   // xform
   tmp = caml_alloc_float_array(6);
   for (int i = 0; i < 6; i++) {
-    Store_double_array_field(tmp, i, g->xform[i]);
+    Store_double_array_field(tmp, i, (double)g->xform[i]);
   }
   Store_field(ret, field++, tmp);
   // spread
@@ -95,7 +121,7 @@ value caml_nsvg_alloc_bounds(float* bounds) {
   CAMLlocal1(ret);
   ret = caml_alloc_float_array(4); // box
   for (int i = 0; i < 4; i++) {
-    Store_double_array_field(ret, i, bounds[i]);
+    Store_double_array_field(ret, i, (double)bounds[i]);
   }
   CAMLreturn(ret);
 }
@@ -106,8 +132,8 @@ value caml_nsvg_alloc_point(float* pt) {
   CAMLparam0();
   CAMLlocal1(ret);
   ret = caml_alloc_float_array(2);
-  Store_double_array_field(ret, 0, pt[0]);
-  Store_double_array_field(ret, 1, pt[1]);
+  Store_double_array_field(ret, 0, (double)pt[0]);
+  Store_double_array_field(ret, 1, (double)pt[1]);
   CAMLreturn(ret);
 }
 
@@ -135,12 +161,43 @@ value caml_nsvg_alloc_path(NSVGpath* path) {
   CAMLreturn(ret);
 }
 
+// NSVGtext
+
+value caml_nsvg_alloc_text(NSVGtext* text) {
+  CAMLparam0();
+  CAMLlocal2(ret, tmp);
+  ret = caml_alloc(6, 0); // nb of record fields
+  int field = 0;
+  // xform
+  tmp = caml_alloc_float_array(6);
+  for (int i = 0; i < 6; i++) {
+    Store_double_array_field(tmp, i, (double)text->xform[i]);
+  }
+  Store_field(ret, field++, tmp);
+  // anchor
+  tmp = caml_nsvg_text_anchor(text->anchor);
+  Store_field(ret, field++, tmp);
+  // style
+  tmp = caml_nsvg_text_style(text->style);
+  Store_field(ret, field++, tmp);
+  // fontsize
+  tmp = caml_copy_double(text->fontsize);
+  Store_field(ret, field++, tmp);
+  // fontfamily
+  tmp = caml_copy_string(text->fontfamily);
+  Store_field(ret, field++, tmp);
+  // s
+  tmp = caml_copy_string(text->s);
+  Store_field(ret, field++, tmp);
+  CAMLreturn(ret);
+}
+
 // NSVGshape
 
 value caml_nsvg_alloc_shape(NSVGshape* shape) {
   CAMLparam0();
   CAMLlocal3(ret, tmp, list);
-  ret = caml_alloc(13, 0); // nb of record fields
+  ret = caml_alloc(14, 0); // nb of record fields
   int field = 0;
   // id
   char* id_tmp = calloc(65, sizeof(char));
@@ -166,7 +223,7 @@ value caml_nsvg_alloc_shape(NSVGshape* shape) {
   // stroke_dash_array
   tmp = caml_alloc_float_array(shape->strokeDashCount);
   for (int i = 0; i < shape->strokeDashCount; i++) {
-    Store_double_array_field(tmp, i, shape->strokeDashArray[i]);
+    Store_double_array_field(tmp, i, (double)shape->strokeDashArray[i]);
   }
   Store_field(ret, field++, tmp);
   // stroke_line_join
@@ -174,6 +231,9 @@ value caml_nsvg_alloc_shape(NSVGshape* shape) {
   Store_field(ret, field++, tmp);
   // stroke_line_cap
   tmp = Val_int(shape->strokeLineCap);
+  Store_field(ret, field++, tmp);
+  // stroke_align
+  tmp = Val_int(shape->strokeAlign);
   Store_field(ret, field++, tmp);
   // miter_limit
   tmp = caml_copy_double(shape->miterLimit);
@@ -187,19 +247,30 @@ value caml_nsvg_alloc_shape(NSVGshape* shape) {
   // bounds
   tmp = caml_nsvg_alloc_bounds(shape->bounds);
   Store_field(ret, field++, tmp);
-  // paths
-  list = Val_int(0);
-  value* cur = &list;
-  NSVGpath* path = shape->paths;
-  while (path) {
-    *cur = caml_alloc_tuple(2);
-    tmp = caml_nsvg_alloc_path(path);
-    Store_field(*cur, 0, tmp);
-    Store_field(*cur, 1, Val_int(0));
-    cur = &Field(*cur, 1);
-    path = path->next;
+  // payload
+  if (shape->paths) {
+    assert(shape->text == NULL);
+    list = Val_int(0);
+    value* cur = &list;
+    NSVGpath* path = shape->paths;
+    while (path) {
+      *cur = caml_alloc_tuple(2);
+      tmp = caml_nsvg_alloc_path(path);
+      Store_field(*cur, 0, tmp);
+      Store_field(*cur, 1, Val_int(0));
+      cur = &Field(*cur, 1);
+      path = path->next;
+    }
+    tmp = caml_alloc(1, 0); // Shape_paths(_)
+    Store_field(tmp, 0, list);
+  } else {
+    assert(shape->text != NULL);
+    assert(shape->paths == NULL);
+    list/*not actually a list*/ = caml_nsvg_alloc_text(shape->text);
+    tmp = caml_alloc(1, 1); // Shape_text(_)
+    Store_field(tmp, 0, list);
   }
-  Store_field(ret, field++, list);
+  Store_field(ret, field++, tmp);
   CAMLreturn(ret);
 }
 
@@ -208,13 +279,19 @@ value caml_nsvg_alloc_shape(NSVGshape* shape) {
 value caml_nsvg_alloc_image(NSVGimage* image) {
   CAMLparam0();
   CAMLlocal3(ret, tmp, list);
-  ret = caml_alloc(3, 0);
+  ret = caml_alloc(4, 0); // nb of record fields
+  int field = 0;
   // width
   tmp = caml_copy_double(image->width);
-  Store_field(ret, 0, tmp);
+  Store_field(ret, field++, tmp);
   // height
   tmp = caml_copy_double(image->height);
-  Store_field(ret, 1, tmp);
+  Store_field(ret, field++, tmp);
+  // viewXform
+  tmp = caml_alloc_float_array(6);
+  for (int i = 0; i < 6; i++)
+    Store_double_array_field(tmp, i, (double)image->viewXform[i]);
+  Store_field(ret, field++, tmp);
   // shapes
   list = Val_int(0);
   value* cur = &list;
@@ -227,7 +304,7 @@ value caml_nsvg_alloc_image(NSVGimage* image) {
     cur = &Field(*cur, 1);
     shape = shape->next;
   }
-  Store_field(ret, 2, list);
+  Store_field(ret, field++, list);
   CAMLreturn(ret);
 }
 
@@ -251,6 +328,16 @@ value caml_nsvg_image_height(value image) {
   CAMLlocal1(ret);
   NSVGimage* image_p = (NSVGimage*) (image & ~1);
   ret = caml_copy_double((double)image_p->height);
+  CAMLreturn(ret);
+}
+
+value caml_nsvg_image_viewXform(value image) {
+  CAMLparam1(image);
+  CAMLlocal1(ret);
+  NSVGimage* image_p = (NSVGimage*) (image & ~1);
+  ret = caml_alloc_float_array(6);
+  for (int i = 0; i < 6; i++)
+    Store_double_array_field(ret, i, (double)image_p->viewXform[i]);
   CAMLreturn(ret);
 }
 

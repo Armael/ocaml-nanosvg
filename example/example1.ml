@@ -12,6 +12,17 @@ let main filename =
   let dst = Bigarray.Array1.create Bigarray.Int8_unsigned Bigarray.C_layout (w * h * 4) in
   Nanosvg.rasterize rast img ~tx:0. ~ty:0. ~scale:1. ~dst ~w ~h ();
 
+  (* print out text nodes *)
+  let img = Nanosvg.lift img in
+  print_endline "Text_nodes:";
+  List.iter (fun s ->
+    match s.Nanosvg.payload with
+    | Shape_paths _ -> ()
+    | Shape_text txt ->
+      Printf.printf "[font:%s, size:%f] %s\n%!"
+        txt.fontfamily txt.fontsize txt.s
+  ) img.shapes;
+
   begin match Sdl.init Sdl.Init.video with
     | Error (`Msg e) -> Sdl.log "Init error: %s" e; exit 1
     | Ok () -> ()
