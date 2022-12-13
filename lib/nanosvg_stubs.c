@@ -197,7 +197,7 @@ value caml_nsvg_alloc_text(NSVGtext* text) {
 value caml_nsvg_alloc_shape(NSVGshape* shape) {
   CAMLparam0();
   CAMLlocal3(ret, tmp, list);
-  ret = caml_alloc(14, 0); // shape
+  ret = caml_alloc(15, 0); // shape
   int field = 0;
   // id
   char* id_tmp = calloc(65, sizeof(char));
