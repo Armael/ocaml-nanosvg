@@ -3,6 +3,7 @@
   (foreign_stubs
    (language c)
    (names nanosvg_stubs))
+  (public_name nanosvg)
 )
 
 (copy_files ../vendor/*.h)
