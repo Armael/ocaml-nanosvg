@@ -8,7 +8,7 @@ type stroke_align = Stroke_align_center | Stroke_align_inner | Stroke_align_oute
 
 type gradient_stop = { color : Int32.t; offset : float }
 type gradient = {
-  xform : float array;
+  xform : float array; (* of length 6 *)
   spread : spread;
   fx : float; fy : float;
   stops : gradient_stop array;
@@ -34,7 +34,7 @@ type path = {
 }
 
 type text = {
-  xform : float array;
+  xform : float array; (* of length 6 *)
   anchor : text_anchor;
   style : text_style;
   fontsize : float;
@@ -67,7 +67,7 @@ type shape = {
 type image = {
   width : float;
   height : float;
-  viewXform : float array;
+  viewXform : float array; (* of length 6 *)
   shapes : shape list;
 }
 

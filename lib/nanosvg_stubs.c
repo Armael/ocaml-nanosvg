@@ -58,7 +58,7 @@ value caml_nsvg_alloc_gradient_stop(NSVGgradientStop* gs) {
 value caml_nsvg_alloc_gradient(NSVGgradient* g) {
   CAMLparam0();
   CAMLlocal2(ret, tmp);
-  ret = caml_alloc(5, 0);
+  ret = caml_alloc(5, 0); // gradient
   int field = 0;
   // xform
   tmp = caml_alloc_float_array(6);
@@ -131,7 +131,7 @@ value caml_nsvg_alloc_bounds(float* bounds) {
 value caml_nsvg_alloc_point(float* pt) {
   CAMLparam0();
   CAMLlocal1(ret);
-  ret = caml_alloc_float_array(2);
+  ret = caml_alloc_float_array(2); // point
   Store_double_array_field(ret, 0, (double)pt[0]);
   Store_double_array_field(ret, 1, (double)pt[1]);
   CAMLreturn(ret);
@@ -142,10 +142,10 @@ value caml_nsvg_alloc_point(float* pt) {
 value caml_nsvg_alloc_path(NSVGpath* path) {
   CAMLparam0();
   CAMLlocal3(ret, tmp, tmp2);
-  ret = caml_alloc(3, 0); // nb of record fields
+  ret = caml_alloc(3, 0); // path
   int field = 0;
   // points
-  tmp = caml_alloc(path->npts, 0);
+  tmp = caml_alloc(path->npts, 0); // path.points
   for (int i = 0; i < path->npts; i++) {
     tmp2 = caml_nsvg_alloc_point(&path->pts[i*2]);
     Store_field(tmp, i, tmp2);
@@ -166,10 +166,10 @@ value caml_nsvg_alloc_path(NSVGpath* path) {
 value caml_nsvg_alloc_text(NSVGtext* text) {
   CAMLparam0();
   CAMLlocal2(ret, tmp);
-  ret = caml_alloc(6, 0); // nb of record fields
+  ret = caml_alloc(6, 0); // text
   int field = 0;
   // xform
-  tmp = caml_alloc_float_array(6);
+  tmp = caml_alloc_float_array(6); // text.xform
   for (int i = 0; i < 6; i++) {
     Store_double_array_field(tmp, i, (double)text->xform[i]);
   }
@@ -197,7 +197,7 @@ value caml_nsvg_alloc_text(NSVGtext* text) {
 value caml_nsvg_alloc_shape(NSVGshape* shape) {
   CAMLparam0();
   CAMLlocal3(ret, tmp, list);
-  ret = caml_alloc(14, 0); // nb of record fields
+  ret = caml_alloc(14, 0); // shape
   int field = 0;
   // id
   char* id_tmp = calloc(65, sizeof(char));
@@ -254,7 +254,7 @@ value caml_nsvg_alloc_shape(NSVGshape* shape) {
     value* cur = &list;
     NSVGpath* path = shape->paths;
     while (path) {
-      *cur = caml_alloc_tuple(2);
+      *cur = caml_alloc_tuple(2); // (::)
       tmp = caml_nsvg_alloc_path(path);
       Store_field(*cur, 0, tmp);
       Store_field(*cur, 1, Val_int(0));
@@ -279,7 +279,7 @@ value caml_nsvg_alloc_shape(NSVGshape* shape) {
 value caml_nsvg_alloc_image(NSVGimage* image) {
   CAMLparam0();
   CAMLlocal3(ret, tmp, list);
-  ret = caml_alloc(4, 0); // nb of record fields
+  ret = caml_alloc(4, 0); // image
   int field = 0;
   // width
   tmp = caml_copy_double(image->width);
@@ -297,7 +297,7 @@ value caml_nsvg_alloc_image(NSVGimage* image) {
   value* cur = &list;
   NSVGshape* shape = image->shapes;
   while (shape) {
-    *cur = caml_alloc_tuple(2);
+    *cur = caml_alloc_tuple(2); // (::)
     tmp = caml_nsvg_alloc_shape(shape);
     Store_field(*cur, 0, tmp);
     Store_field(*cur, 1, Val_int(0));
