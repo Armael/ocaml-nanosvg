@@ -90,20 +90,20 @@ value caml_nsvg_alloc_paint(NSVGpaint* paint) {
   CAMLlocal2(ret, tmp);
   switch(paint->type) {
     case NSVG_PAINT_NONE:
-      ret = Val_int(0);
+      ret = Val_int(0); // Paint_none
       break;
     case NSVG_PAINT_COLOR:
-      ret = caml_alloc(1, 1);
+      ret = caml_alloc(1, 0); // Paint_color
       tmp = caml_copy_int32(paint->color);
       Store_field(ret, 0, tmp);
       break;
     case NSVG_PAINT_LINEAR_GRADIENT:
-      ret = caml_alloc(1, 2);
+      ret = caml_alloc(1, 1); // Paint_linear_gradient
       tmp = caml_nsvg_alloc_gradient(paint->gradient);
       Store_field(ret, 0, tmp);
       break;
     case NSVG_PAINT_RADIAL_GRADIENT:
-      ret = caml_alloc(1, 3);
+      ret = caml_alloc(1, 2); // Paint_radial_gradient
       tmp = caml_nsvg_alloc_gradient(paint->gradient);
       Store_field(ret, 0, tmp);
       break;
