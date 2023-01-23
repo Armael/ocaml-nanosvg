@@ -44,5 +44,5 @@ let read_svg filename =
   |> use_svg
 
 let () =
-  read_svg "../example/23.svg";
-  read_svg "../example/drawing.svg"
+  read_svg "example/23.svg";
+  read_svg "example/drawing.svg"
