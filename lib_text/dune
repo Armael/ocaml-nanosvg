@@ -1,5 +1,5 @@
 (library
   (name nanosvg_text)
-  (public_name nanosvg.text)
+  (public_name nanosvg_text)
   (libraries nanosvg stb_truetype)
 )

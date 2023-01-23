@@ -16,3 +16,14 @@
    (odoc :with-doc))
   (synopsis "Simple SVG parser and rasterizer")
   (description "The NanoSVG library and rasterizer, packaged as an OCaml library"))
+
+(package
+  (name nanosvg_text)
+  (depends
+   (ocaml (>= 4.08.0))
+   (dune (>= 2.0))
+   (nanosvg (>= 0.1))
+   (stb_truetype (>= 0.7))
+   (odoc :with-doc))
+  (synopsis "Text rendering for NanoSVG text nodes")
+  (description "Basic text rendering for NanoSVG text nodes using stb_truetype"))
