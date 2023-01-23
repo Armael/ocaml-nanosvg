@@ -1,3 +1,8 @@
-(test
+(executable
   (name main)
   (libraries nanosvg))
+
+(rule
+  (alias runtest)
+  (deps ../example/23.svg ../example/drawing.svg)
+  (action (run ./main.exe %{deps})))

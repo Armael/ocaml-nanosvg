@@ -44,5 +44,4 @@ let read_svg filename =
   |> use_svg
 
 let () =
-  read_svg "example/23.svg";
-  read_svg "example/drawing.svg"
+  List.iter read_svg (List.tl @@ Array.to_list Sys.argv)
