@@ -11,7 +11,7 @@
 (package
   (name nanosvg)
   (depends
-   (ocaml (>= 4.08.0))
+   (ocaml (>= 4.12.0))
    (dune (>= 2.0))
    (odoc :with-doc))
   (synopsis "Simple SVG parser and rasterizer")
@@ -20,7 +20,7 @@
 (package
   (name nanosvg_text)
   (depends
-   (ocaml (>= 4.08.0))
+   (ocaml (>= 4.12.0))
    (dune (>= 2.0))
    (nanosvg (>= 0.1))
    (stb_truetype (>= 0.7))
