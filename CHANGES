@@ -1,9 +1,10 @@
+0.2 (27/01/2023)
+----------------
+
+- parse and decode XML entities in SVG text nodes
+
 0.1 (23/01/2023)
 ----------------
 
 - initial release
 
-0.2 (27/01/2023)
-----------------
-
-- parse and decode XML entities in SVG text nodes
