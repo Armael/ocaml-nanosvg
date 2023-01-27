@@ -12,7 +12,7 @@ license: "MIT"
 homepage: "https://github.com/Armael/ocaml-nanosvg"
 bug-reports: "https://github.com/Armael/ocaml-nanosvg/issues"
 depends: [
-  "ocaml" {>= "4.12.0"}
+  "ocaml" {>= "4.14.0"}
   "dune" {>= "2.7"}
   "odoc" {with-doc}
 ]
