@@ -1,5 +1,5 @@
 opam-version: "2.0"
-version: "0.1"
+version: "0.2"
 synopsis: "Simple SVG parser and rasterizer"
 description:
   "The NanoSVG library and rasterizer, packaged as an OCaml library"
