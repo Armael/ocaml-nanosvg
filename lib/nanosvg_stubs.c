@@ -7,6 +7,7 @@
 #include <caml/memory.h>
 #include <caml/bigarray.h>
 #include <caml/fail.h>
+#define NANOSVG_ALL_COLOR_KEYWORDS	// Include full list of color keywords.
 #define NANOSVG_IMPLEMENTATION
 #define NANOSVGRAST_IMPLEMENTATION
 #include "nanosvg.h"
